@@ -49,7 +49,6 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
-    // Cambiamos '/reportes/kafka-test' por '/reportes/test'
     const response = await fetch(`${BASE_URL}/reportes/test`, {
       method: 'POST',
       headers: {

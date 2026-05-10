@@ -21,6 +21,7 @@ const MAPPING = {
   'map.fill': 'map',
   'exclamationmark.triangle.fill': 'warning',
   'pencil': 'edit',
+  'list.bullet': 'list',
 } as IconMapping;
 
 /**

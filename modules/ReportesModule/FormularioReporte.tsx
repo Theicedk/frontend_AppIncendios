@@ -140,6 +140,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 0.5,
   },
+  locationStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  locationStatusText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: '500',
+  },
+  locationSuccessText: {
+    color: Colors.primary,
+  },
+  locationErrorText: {
+    color: Colors.error,
+  },
   warningText: {
     textAlign: 'center',
     fontSize: 10,
@@ -152,3 +170,4 @@ const styles = StyleSheet.create({
 });
 
 export default FormularioReporte;
+
