@@ -49,13 +49,15 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
-    const response = await fetch(`${BASE_URL}/reportes/kafka-test`, {
+    // Cambiamos '/reportes/kafka-test' por '/reportes/test'
+    const response = await fetch(`${BASE_URL}/reportes/test`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
     });
+    
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
     }
