@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { ReporteDTO } from '../../services/apiGateway';
+import { UbicacionContext } from '../../context/UbicacionContext';
 
 export interface FormularioReporteProps {
   onSubmit: (data: ReporteDTO) => void;
@@ -9,16 +10,18 @@ export interface FormularioReporteProps {
 
 const FormularioReporte: React.FC<FormularioReporteProps> = ({ onSubmit }) => {
   const [descripcion, setDescripcion] = useState('');
-  const [latitud, setLatitud] = useState('');
-  const [longitud, setLongitud] = useState('');
+  
+  const ubicacionContext = useContext(UbicacionContext);
+  const latitud = ubicacionContext?.latitud;
+  const longitud = ubicacionContext?.longitud;
 
   const handleSubmit = () => {
-    if (!descripcion || !latitud || !longitud) return;
+    if (!descripcion || latitud == null || longitud == null) return;
 
     onSubmit({
       descripcion,
-      latitud: parseFloat(latitud),
-      longitud: parseFloat(longitud),
+      latitud,
+      longitud,
     });
   };
 
@@ -41,33 +44,24 @@ const FormularioReporte: React.FC<FormularioReporteProps> = ({ onSubmit }) => {
         />
       </View>
 
-      <View style={styles.row}>
-        <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-          <Text style={styles.label}>Latitud</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="-33.4489"
-            placeholderTextColor={Colors.outline}
-            value={latitud}
-            onChangeText={setLatitud}
-            keyboardType="numeric"
-          />
-        </View>
-
-        <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-          <Text style={styles.label}>Longitud</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="-70.6693"
-            placeholderTextColor={Colors.outline}
-            value={longitud}
-            onChangeText={setLongitud}
-            keyboardType="numeric"
-          />
-        </View>
+      <View style={styles.inputContainer}>
+        {latitud != null && longitud != null ? (
+          <Text style={styles.locationText}>
+            📍 Ubicación seleccionada: {latitud.toFixed(4)}, {longitud.toFixed(4)}
+          </Text>
+        ) : (
+          <Text style={[styles.locationText, { color: Colors.error }]}>
+            ⚠️ Toca el mapa para seleccionar la ubicación del incendio.
+          </Text>
+        )}
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
+      <TouchableOpacity 
+        style={[styles.button, (!descripcion || latitud == null || longitud == null) && styles.buttonDisabled]} 
+        onPress={handleSubmit} 
+        activeOpacity={0.8}
+        disabled={!descripcion || latitud == null || longitud == null}
+      >
         <Text style={styles.buttonText}>ENVIAR REPORTE CRÍTICO</Text>
       </TouchableOpacity>
       
@@ -139,6 +133,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 15,
     letterSpacing: 0.5,
+  },
+  buttonDisabled: {
+    backgroundColor: Colors.outline,
+    shadowOpacity: 0,
+  },
+  locationText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    textAlign: 'center',
+    marginVertical: 8,
   },
   locationStatusContainer: {
     flexDirection: 'row',

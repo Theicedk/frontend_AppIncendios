@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Modal, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Colors } from '@/constants/Colors';
 import { FormularioReporte } from '@valle-del-sol/reporte-module';
 import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { UbicacionContext } from '../../context/UbicacionContext';
 
 export default function MapaScreen() {
+  const webViewRef = useRef<WebView>(null);
+  const ubicacionContext = useContext(UbicacionContext);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -25,6 +30,11 @@ export default function MapaScreen() {
         ]);
         setFocos(focosData);
         setReportes(reportesData);
+        
+        // Inyectamos los focos una vez que el WebView los tenga listos
+        if (webViewRef.current) {
+          webViewRef.current.injectJavaScript(`window.agregarFocos('${JSON.stringify(focosData)}')`);
+        }
       } catch (err: any) {
         setError(err.message || 'Error al cargar los datos');
       } finally {
@@ -48,62 +58,41 @@ export default function MapaScreen() {
     }
   };
 
+  const onMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.tipo === 'NUEVA_UBICACION' && ubicacionContext) {
+        ubicacionContext.setUbicacion(data.lat, data.lng);
+      }
+    } catch (error) {
+      console.error('Error parsing WebView message', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.mapContainer}>
         {dataLoading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Cargando datos espaciales...</Text>
+            <Text style={styles.loadingText}>Cargando mapa...</Text>
           </View>
         ) : error ? (
           <View style={styles.centerContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : (
-          <>
-            <Text style={styles.sectionTitle}>Focos Detectados</Text>
-            {focos.map((foco) => {
-              const isActive = foco.estado === 'ACTIVO';
-              return (
-                <View 
-                  key={foco.id} 
-                  style={[styles.card, isActive && styles.cardActive]}
-                >
-                  <Text style={[styles.cardTitle, isActive && styles.textActive]}>
-                    Foco #{foco.id} - {foco.estado}
-                  </Text>
-                  <Text style={styles.cardCoord}>Lat: {foco.latitud}</Text>
-                  <Text style={styles.cardCoord}>Lon: {foco.longitud}</Text>
-                </View>
-              );
-            })}
-
-            {focos.length === 0 && (
-              <Text style={styles.emptyText}>No hay focos registrados.</Text>
-            )}
-
-            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Últimos Reportes</Text>
-            {reportes.map((reporte) => (
-              <View key={reporte.id} style={styles.card}>
-                <Text style={styles.cardDesc}>{reporte.descripcion}</Text>
-                <Text style={styles.cardState}>
-                  Estado: {reporte.estado || 'Recibido'}
-                </Text>
-                <Text style={styles.cardCoord}>Lat: {reporte.latitud}</Text>
-                <Text style={styles.cardCoord}>Lon: {reporte.longitud}</Text>
-              </View>
-            ))}
-
-            {reportes.length === 0 && (
-              <Text style={styles.emptyText}>No hay reportes recientes.</Text>
-            )}
-            
-            {/* Espacio extra al final para que el FAB no tape contenido */}
-            <View style={{ height: 80 }} />
-          </>
+          <WebView
+            ref={webViewRef}
+            source={require('../../assets/mapa.html')}
+            style={styles.webview}
+            injectedJavaScriptBeforeContentLoaded={`window.agregarFocos('${JSON.stringify(focos)}')`}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            onMessage={onMessage}
+          />
         )}
-      </ScrollView>
+      </View>
 
       <TouchableOpacity
         style={styles.fab}
@@ -149,56 +138,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scrollContent: {
-    padding: 16,
+  mapContainer: {
+    flex: 1,
+  },
+  webview: {
+    flex: 1,
   },
   centerContainer: {
-    padding: 24,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: Colors.primaryContainer,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  cardActive: {
-    borderColor: Colors.error,
-    backgroundColor: Colors.errorContainer,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.onPrimaryContainer,
-    marginBottom: 8,
-  },
-  textActive: {
-    color: Colors.error,
-  },
-  cardDesc: {
-    fontSize: 16,
-    color: Colors.onPrimaryContainer,
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  cardState: {
-    fontSize: 14,
-    color: Colors.onPrimaryContainer,
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-  cardCoord: {
-    fontSize: 14,
-    color: Colors.onPrimaryContainer,
   },
   errorText: {
     color: Colors.error,
