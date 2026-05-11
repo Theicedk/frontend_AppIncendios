@@ -22,6 +22,7 @@ const MAPPING = {
   'exclamationmark.triangle.fill': 'warning',
   'pencil': 'edit',
   'list.bullet': 'list',
+  'person.fill': 'person',
 } as IconMapping;
 
 /**
