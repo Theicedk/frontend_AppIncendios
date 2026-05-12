@@ -5,8 +5,11 @@ import { fetchDashboardCombinado, FocoMapaDTO, ReporteListaDTO } from '@/service
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function MapaScreen() {
+  const router = useRouter();
   const [focos, setFocos] = useState<FocoMapaDTO[]>([]);
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,6 +138,13 @@ export default function MapaScreen() {
         </View>
 
       </ScrollView>
+
+      <TouchableOpacity 
+        style={styles.floatingButton} 
+        onPress={() => router.push('/funcionario')}
+      >
+        <Ionicons name="shield-checkmark" size={24} color={Colors.onPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -351,5 +361,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.onSurfaceVariant,
     marginTop: 8,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    backgroundColor: Colors.primary,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 });

@@ -21,7 +21,7 @@ export type ReporteListaDTO = {
   estado?: string;
 };
 
-const BASE_URL = 'http://192.168.1.13:8080/api';
+const BASE_URL = 'http://192.168.1.16:8080/api';
 
 export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
   try {
@@ -64,6 +64,20 @@ export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
     }
   } catch (error: any) {
     throw new Error(error.message || 'Error enviando reporte');
+  }
+};
+
+export const verificarReporte = async (id: number): Promise<void> => {
+  try {
+    const response = await fetch(`${BASE_URL}/reportes/${id}/verificar`, {
+      method: 'PUT',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+    }
+  } catch (error: any) {
+    throw new Error(error.message || 'Error verificando reporte');
   }
 };
 
