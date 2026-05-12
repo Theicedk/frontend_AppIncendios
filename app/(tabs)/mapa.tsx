@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Colors } from '@/constants/Colors';
+// eslint-disable-next-line import/no-unresolved
 import { FormularioReporte } from '@valle-del-sol/reporte-module';
 import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -15,6 +17,7 @@ export default function MapaScreen() {
   const [loading, setLoading] = useState(false);
   
   const [focos, setFocos] = useState<FocoMapaDTO[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,15 +85,17 @@ export default function MapaScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : (
-          <WebView
-            ref={webViewRef}
-            source={require('../../assets/mapa.html')}
-            style={styles.webview}
-            injectedJavaScriptBeforeContentLoaded={`window.agregarFocos('${JSON.stringify(focos)}')`}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            onMessage={onMessage}
-          />
+          <>
+            <WebView
+              ref={webViewRef}
+              source={require('../../assets/mapa.html')}
+              style={styles.webview}
+              injectedJavaScriptBeforeContentLoaded={`window.agregarFocos('${JSON.stringify(focos)}')`}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              onMessage={onMessage}
+            />
+          </>
         )}
       </View>
 

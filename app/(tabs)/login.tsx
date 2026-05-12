@@ -30,9 +30,8 @@ const AUTH0_AUDIENCE = '';
 
 // Expo Go proxy project name
 const PROJECT_NAME_FOR_PROXY = '@theicedk/valle-del-sol';
-// URL callback esperada por proxy de Expo Go.
-const PROXY_REDIRECT_URL = AuthSession.getRedirectUrl();
-// URL de retorno local para sesión iniciada en móvil (ruta de esta pantalla).
+// Obtenemos la URL de retorno estándar (en móvil) sin usar el proxy obsoleto.
+// Esto resolverá dinámicamente valledelsol://login o exp://...
 const RETURN_URL = AuthSession.makeRedirectUri({ path: 'login' });
 // For web we want a non-proxy redirect URI that maps to the router path
 const RETURN_URL_WEB = Platform.OS === 'web' && typeof window !== 'undefined'
@@ -121,19 +120,19 @@ export default function LoginScreen() {
         return;
       }
 
-      // Flujo MÓVIL (Expo Go): usa navegador/sesión autenticada y regresa a la app.
+      // Flujo MÓVIL (Expo Go o Standalone): usa navegador/sesión proxy nativo y regresa a la app.
       setLoading(true);
 
       const authUrl =
         `https://${AUTH0_DOMAIN}/authorize?` +
         `client_id=${AUTH0_CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(PROXY_REDIRECT_URL)}` +
+        `&redirect_uri=${encodeURIComponent(RETURN_URL)}` +
         `&response_type=code` +
         `&scope=openid profile email`;
 
-      const proxyStartUrl = sessionUrlProvider.getStartUrl(authUrl, RETURN_URL, PROJECT_NAME_FOR_PROXY);
+      console.log('Debes agregar esta URL en Auth0 Callback URLs de móvil:', RETURN_URL);
 
-      const result = await WebBrowser.openAuthSessionAsync(proxyStartUrl, RETURN_URL);
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, RETURN_URL);
       console.log('Auth result:', result);
 
       // Si usuario cierra/cancela navegador, no se considera éxito.

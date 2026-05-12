@@ -1,3 +1,5 @@
+import { DashboardDTO } from '../types/DashboardDTO';
+
 export type ReporteDTO = {
   descripcion: string;
   latitud: number;
@@ -19,7 +21,7 @@ export type ReporteListaDTO = {
   estado?: string;
 };
 
-const BASE_URL = 'http://192.168.1.16:8080/api';
+const BASE_URL = 'http://192.168.1.13:8080/api';
 
 export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
   try {
@@ -62,5 +64,18 @@ export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
     }
   } catch (error: any) {
     throw new Error(error.message || 'Error enviando reporte');
+  }
+};
+
+export const fetchDashboardCombinado = async (): Promise<DashboardDTO> => {
+  try {
+    const response = await fetch(`${BASE_URL}/bff/dashboard-combinado`);
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data as DashboardDTO;
+  } catch (error: any) {
+    throw new Error(error.message || 'Error fetching dashboard combinado');
   }
 };
