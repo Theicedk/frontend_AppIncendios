@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Colors } from '@/constants/Colors';
+import { useFocusEffect } from 'expo-router';
 // eslint-disable-next-line import/no-unresolved
 import { FormularioReporte } from '@valle-del-sol/reporte-module';
 import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
@@ -22,6 +23,28 @@ export default function MapaScreen() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchCurrentFocos = async () => {
+    try {
+      const [focosData, reportesData] = await Promise.all([
+        fetchFocos(),
+        fetchReportes()
+      ]);
+      setFocos(focosData);
+      setReportes(reportesData);
+      
+      if (webViewRef.current) {
+        // En lugar de llamar a clearSelectedMarker() sin verificar si existe, 
+        // pasamos los focos y actualizamos los puntos del mapa siempre.
+        webViewRef.current.injectJavaScript(`
+          if (typeof window.clearSelectedMarker === 'function') window.clearSelectedMarker(); 
+          if (typeof window.agregarFocos === 'function') window.agregarFocos('${JSON.stringify(focosData)}');
+        `);
+      }
+    } catch (err: any) {
+      console.error('Error actualizando focos:', err);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setDataLoading(true);
@@ -33,11 +56,7 @@ export default function MapaScreen() {
         ]);
         setFocos(focosData);
         setReportes(reportesData);
-        
-        // Inyectamos los focos una vez que el WebView los tenga listos
-        if (webViewRef.current) {
-          webViewRef.current.injectJavaScript(`window.agregarFocos('${JSON.stringify(focosData)}')`);
-        }
+        // La inyección inicial se hace vía injectedJavaScriptBeforeContentLoaded o el ref una vez cargado
       } catch (err: any) {
         setError(err.message || 'Error al cargar los datos');
       } finally {
@@ -48,12 +67,25 @@ export default function MapaScreen() {
     loadData();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!dataLoading) { // Solo refetch si ya cargó inicialmente
+        fetchCurrentFocos();
+      }
+    }, [dataLoading])
+  );
+
   const handleReportSubmit = async (data: ReporteDTO) => {
     try {
       setLoading(true);
       await enviarReporte(data);
-      Alert.alert('Éxito', 'Reporte enviado a Kafka');
+      Alert.alert('Éxito', 'Reporte enviado al sistema central.');
       setModalVisible(false);
+      
+      // Asegurar que el punto quede fijo refetching los focos (o reportes de este dashboard) 
+      // y pidiendo al webview que actualice y remueva la marca temporal
+      await fetchCurrentFocos();
+      
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo enviar el reporte');
     } finally {

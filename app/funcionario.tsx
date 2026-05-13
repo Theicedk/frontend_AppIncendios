@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchReportes, verificarReporte, ReporteListaDTO } from '@/services/apiGateway';
 import { Colors } from '@/constants/Colors';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function FuncionarioScreen() {
@@ -11,9 +11,11 @@ export default function FuncionarioScreen() {
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    cargarReportes();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      cargarReportes();
+    }, [])
+  );
 
   const cargarReportes = async () => {
     try {
@@ -30,13 +32,8 @@ export default function FuncionarioScreen() {
   const handleVerificar = async (id: number) => {
     try {
       await verificarReporte(id);
-      Alert.alert('Éxito', 'Reporte verificado correctamente');
-      // Actualizamos solo el reporte modificado en el estado local para ser rápidos o hacemos reload
-      setReportes((prev) =>
-        prev.map((rep) =>
-          rep.id === id ? { ...rep, estado: 'VERIFICADO' } : rep
-        )
-      );
+      Alert.alert('Éxito', 'Reporte verificado. Los mapas se actualizarán en breve.');
+      cargarReportes();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo verificar el reporte');
     }

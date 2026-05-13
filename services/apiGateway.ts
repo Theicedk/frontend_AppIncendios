@@ -21,7 +21,7 @@ export type ReporteListaDTO = {
   estado?: string;
 };
 
-const BASE_URL = 'http://192.168.1.16:8080/api';
+const BASE_URL = 'http://192.168.1.13:8080/api';
 
 export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
   try {
@@ -51,7 +51,7 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
-    const response = await fetch(`${BASE_URL}/reportes/test`, {
+    const response = await fetch(`${BASE_URL}/reportes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -67,17 +67,24 @@ export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   }
 };
 
-export const verificarReporte = async (id: number): Promise<void> => {
+export const verificarReporte = async (id: number) => {
   try {
     const response = await fetch(`${BASE_URL}/reportes/${id}/verificar`, {
-      method: 'PUT',
+      method: 'PUT', // Asegurar que sea PUT
+      headers: {
+        'Content-Type': 'application/json' // Obligatorio para peticiones JSON
+      },
+      // body: JSON.stringify({...}) // (Solo si necesitas enviar un body adicional mente)
     });
-    
+
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+      throw new Error(`Error en la solicitud: ${response.status}`);
     }
-  } catch (error: any) {
-    throw new Error(error.message || 'Error verificando reporte');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error al verificar el reporte:', error);
+    throw error;
   }
 };
 

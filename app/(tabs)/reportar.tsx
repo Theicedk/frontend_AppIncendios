@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 export default function ReportarScreen() {
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const router = useRouter();
 
   const handleSubmit = async (data: ReporteDTO) => {
@@ -26,6 +27,7 @@ export default function ReportarScreen() {
     setLoading(true);
     try {
       await enviarReporte(data);
+      setFormKey((prev) => prev + 1);
       Alert.alert('Éxito', 'Reporte enviado a Kafka');
       // FormularioReporte debería manejar su propia limpieza de formulario si es posible, 
       // o se puede forzar pasando una clave. Asumimos que maneja la limpieza o no necesita.
@@ -49,7 +51,7 @@ export default function ReportarScreen() {
             <ThemedText style={styles.loadingText}>Enviando reporte...</ThemedText>
           </View>
         ) : (
-          <FormularioReporte onSubmit={handleSubmit} />
+          <FormularioReporte key={formKey} onSubmit={handleSubmit} />
         )}
 
         <Modal
