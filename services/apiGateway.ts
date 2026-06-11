@@ -82,14 +82,18 @@ export const verificarReporte = async (id: number): Promise<void> => {
 };
 
 export const fetchDashboardCombinado = async (): Promise<DashboardDTO> => {
-  try {
+try {
     const response = await fetch(`${BASE_URL}/bff/dashboard-combinado`);
+
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
     }
+    
     const data = await response.json();
     return data as DashboardDTO;
   } catch (error: any) {
     throw new Error(error.message || 'Error fetching dashboard combinado');
   }
 };
+
+

@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { ReporteDTO } from '../../services/apiGateway';
 import { UbicacionContext } from '../../context/UbicacionContext';
@@ -26,6 +26,7 @@ const FormularioReporte: React.FC<FormularioReporteProps> = ({ onSubmit }) => {
   };
 
   return (
+    <ScrollView keyboardShouldPersistTaps="handled">
     <View style={styles.container}>
       <Text style={styles.title}>Reportar Incendio</Text>
       <Text style={styles.subtitle}>
@@ -67,6 +68,7 @@ const FormularioReporte: React.FC<FormularioReporteProps> = ({ onSubmit }) => {
       
       <Text style={styles.warningText}>LA FALSIFICACIÓN DE REPORTES ES UN DELITO PENADO</Text>
     </View>
+    </ScrollView>
   );
 };
 

@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import { Colors } from '@/constants/Colors';
 // eslint-disable-next-line import/no-unresolved
 import { FormularioReporte } from '@valle-del-sol/reporte-module';
-import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
+import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO, fetchDashboardCombinado } from '@/services/apiGateway';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { UbicacionContext } from '../../context/UbicacionContext';
 
@@ -23,22 +23,27 @@ export default function MapaScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadData = async () => {
+const loadData = async () => {
       setDataLoading(true);
       setError(null);
       try {
-        const [focosData, reportesData] = await Promise.all([
-          fetchFocos(),
-          fetchReportes()
-        ]);
-        setFocos(focosData);
-        setReportes(reportesData);
+        console.log("👀 [UI] Iniciando loadData en mapa.tsx..."); // TRAMPA DE INICIO
         
+        // Llamamos a nuestro endpoint público del BFF en lugar de los protegidos
+        const dashboardData = await fetchDashboardCombinado();
+        
+        console.log("✅ [UI] Datos recibidos con éxito"); // TRAMPA DE ÉXITO
+
+        // Guardamos los datos en los estados
+        setFocos(dashboardData.focos.reverse());
+        setReportes(dashboardData.reportes.reverse());
+
         // Inyectamos los focos una vez que el WebView los tenga listos
         if (webViewRef.current) {
-          webViewRef.current.injectJavaScript(`window.agregarFocos('${JSON.stringify(focosData)}')`);
+          webViewRef.current.injectJavaScript(`window.agregarFocos('${JSON.stringify(dashboardData.focos)}')`);
         }
       } catch (err: any) {
+        console.log("❌ [UI] Error atrapado en mapa.tsx:", err.message); // TRAMPA DE ERROR
         setError(err.message || 'Error al cargar los datos');
       } finally {
         setDataLoading(false);
