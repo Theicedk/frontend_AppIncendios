@@ -38,7 +38,7 @@ export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
 
 export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
   try {
-    const response = await fetch(`${BASE_URL}/focos`);
+    const response = await fetch(`${BASE_URL}/bff/dashboard-combinado`);
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
     }

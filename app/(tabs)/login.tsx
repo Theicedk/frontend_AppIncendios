@@ -1,18 +1,67 @@
-﻿import React from 'react';
+﻿import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import * as WebBrowser from 'expo-web-browser';
+//Import general de expo para llegar hacia un inicio de sesión (en nuestro caso auth0)
+import * as AuthSession from 'expo-auth-session';
 
 
+//funcion que verifica que una vez que se termine de verificar con auth0 se cierre la ventana
+WebBrowser.maybeCompleteAuthSession();
 
-
+//Coordenadas de Auth0 para la autenticación
+const discovery = {
+  //URL donde el usuario se autentificará
+  authorizationEndpoint: 'https://dev-ecmx143cjy36oshj.us.auth0.com/authorize',
+  //URL donde se intercambiará el código por el token
+  tokenEndpoint: 'https://dev-ecmx143cjy36oshj.us.auth0.com/oauth/token',};
 
 //Boton de login 
 export default function LoginScreen() {
+  //1.- Configuracion de la ruta de regreso para expo sin utilizar el proxy
+  const redirectUri = AuthSession.makeRedirectUri({scheme: 'valledelsol'});
+  //2.- Configuración de Auth0
+  const[request, result, promptAsync] = AuthSession.useAuthRequest({
+    clientId: 'JDRWSan8BqKkpWlGH5IutSE4ZXnyllNF',
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri: redirectUri,
+  }, discovery);
+
+  //2.- Escuchamos al usuario cuando vuelva de la autenticación
+  useEffect(() => {
+    console.log('Redirigido a la siguiente URL: ', redirectUri);
+    //Verifica si el resultado de la autenticación es exitoso
+    if(result?.type === 'success'){
+
+      //Guardamos el resultado en una variable
+      const { code } = result.params;
+
+      //Generamos una peticion para obtener el token a partir de nuestros datos y resultados
+      AuthSession.exchangeCodeAsync({
+        clientId: 'JDRWSan8BqKkpWlGH5IutSE4ZXnyllNF',
+        code: code,
+        redirectUri: redirectUri,
+        extraParams: {
+          code_verifier: request?.codeVerifier || '',
+        },
+      }, discovery)
+      //Una vez enviado los datos y obteniendo el token lo mostraremos en consola
+      .then((tokenResult) => {
+        console.log('Token de acceso obtenido:', tokenResult?.accessToken);
+      })
+      //Y sino se muestra el error en consola
+      .catch((error) => {
+        console.error('Error al intercambiar el código por el token:', error);
+      });
+    }
+  }, [result,redirectUri,request]);
+
   const handleLogin = () => {
     console.log('Iniciar Sesión apretado');
+    promptAsync();
   };
 
 //Boton de logout
