@@ -1,5 +1,5 @@
-﻿import React, { useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
+﻿import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Button, Image } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/Colors';
@@ -30,6 +30,30 @@ export default function LoginScreen() {
     redirectUri: redirectUri,
   }, discovery);
 
+  //Creamos una variable de estado la cual cambiará una vez el usuario ingrese
+  const [user, setUser] = useState<any>(null);
+
+  //Creamos una funcion para que una vez se tenga el token del usuario, se haga un fetch
+  //hacia un endpoint de auth0 para que este nos devuelva los datos del usuario
+  const fetchUserInfo = async (token: string) => {
+    try{
+      //Aqui mandamos nuestro token hacia el endpoint
+      const response = await fetch('https://dev-ecmx143cjy36oshj.us.auth0.com/userinfo', {
+        headers: {
+          Authorization: `Bearer ${token}`,// Nuestro token siendo enviado
+        },
+      });
+      
+      //Esperamos la respuesta de el  fetch y luego guardamos los datos del usuario en el estado
+      const userInfo = await response.json();
+      setUser(userInfo); 
+      //Para luego mostrar en consola los datos del usuario
+      console.log('Información del usuario recibida con exito :', userInfo);
+    }catch(error){
+      console.error('Error al obtener la información del usuario:', error);
+    }
+  }
+
   //2.- Escuchamos al usuario cuando vuelva de la autenticación
   useEffect(() => {
     console.log('Redirigido a la siguiente URL: ', redirectUri);
@@ -51,6 +75,10 @@ export default function LoginScreen() {
       //Una vez enviado los datos y obteniendo el token lo mostraremos en consola
       .then((tokenResult) => {
         console.log('Token de acceso obtenido:', tokenResult?.accessToken);
+        //Si se obtiene el token, se llama a la función para obtener la información del usuario
+        if(tokenResult?.accessToken){
+          fetchUserInfo(tokenResult.accessToken);
+        }
       })
       //Y sino se muestra el error en consola
       .catch((error) => {
@@ -67,6 +95,7 @@ export default function LoginScreen() {
 //Boton de logout
   const handleLogout = () => {
     console.log('Cerrar Sesión apretado');
+    setUser(null); // Limpiamos los datos del usuario
   };
 
   const handleTestBackend = async () => {
@@ -85,41 +114,43 @@ export default function LoginScreen() {
       console.log('Error al conectar con el Backend:', error);
     }
 
-
-
-
-
-    
   };
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
-        {/* Encabezado */}
-        <View style={styles.header}>
-          <IconSymbol size={80} name="person.circle.fill" color={Colors.light.tint} />
-          <ThemedText style={styles.title}>Mi Cuenta</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Gestiona tu acceso y comprueba la conexión
-          </ThemedText>
-        </View>
+        {/*Se realiza la consulta para verificar si se encuentra un usuario autenticado*/}
+        {user ? (
+          //Primero en el caso de que nuestra variable donde manejamos al usuario
+          //SI tenga datos
+          <View style={styles.profileContainer}>
+            {/*Primero extraeremos la foto de perfil del usuario en auth0, y la mostraremos*/}
+            {user.picture && (
+              <Image source={{ uri: user.picture }} style={styles.avatar} />
+            )}
 
-        {/* Sección de Botones */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-            <IconSymbol size={24} name="lock.fill" color="#fff" />
-            <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.secondaryButton} onPress={handleLogout}>
-            <IconSymbol size={24} name="lock.open.fill" color={Colors.light.tint} />
-            <Text style={styles.secondaryButtonText}>Cerrar Sesión</Text>
-          </TouchableOpacity>
+            <Text style= {styles.welcomeText}>Bienvenido, {user.name}!</Text>
+            <Text style={styles.emailText}>{user.email}</Text>
 
           <TouchableOpacity style={styles.testButton} onPress={handleTestBackend}>
             <IconSymbol size={24} name="network" color="#fff" />
             <Text style={styles.testButtonText}>Probar Conexión al Backend</Text>
           </TouchableOpacity>
-        </View>
+
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutButton}>Cerrar Sesión</Text>
+            </TouchableOpacity>
+          </View>):(
+           //En el caso de que no se encuentre un usuario autenticado, se mostrará el siguiente mensaje
+          <View style={styles.loginContainer}>
+            <Text style={styles.title}>No se encontró ningún usuario autenticado.</Text>
+            <Text style={styles.subtitle}>Para aprovechar las funciones al máximo, por favor inicie sesión.</Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+            <Text style={styles.primaryButtonText}>Ingresar con Auth0</Text>
+          </TouchableOpacity>
+          </View>)
+          }
       </ThemedView>
     </SafeAreaView>
   );
@@ -199,5 +230,42 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  profileContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    width: '100%',
+  },
+  loginContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60, // Esto hace que la imagen sea un círculo perfecto
+    marginBottom: 20,
+    borderWidth: 3,
+    borderColor: '#007BFF', // Un borde azul bonito
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  emailText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 40,
+  },
+  logoutButton: {
+    backgroundColor: '#FF3B30', // Botón rojo para salir
+    padding: 15,
+    borderRadius: 8,
+    width: '80%',
+    alignItems: 'center',
   },
 });
