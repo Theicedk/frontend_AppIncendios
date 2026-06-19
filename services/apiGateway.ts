@@ -11,6 +11,7 @@ export type FocoMapaDTO = {
   latitud: number;
   longitud: number;
   estado: string;
+  verificado: boolean;
 };
 
 export type ReporteListaDTO = {
@@ -19,9 +20,10 @@ export type ReporteListaDTO = {
   latitud: number;
   longitud: number;
   estado?: string;
+  verificado?: boolean;
 };
 
-const BASE_URL = 'http://192.168.1.16:8080/api';
+const BASE_URL = 'http://192.168.1.19:8080/api';
 
 export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
   try {
@@ -38,7 +40,7 @@ export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
 
 export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
   try {
-    const response = await fetch(`${BASE_URL}/bff/dashboard-combinado`);
+    const response = await fetch(`${BASE_URL}/focos`);
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
     }
@@ -51,7 +53,7 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
-    const response = await fetch(`${BASE_URL}/reportes/test`, {
+    const response = await fetch(`${BASE_URL}/reportes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

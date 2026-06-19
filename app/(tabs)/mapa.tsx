@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Colors } from '@/constants/Colors';
+import { useFocusEffect } from 'expo-router';
 // eslint-disable-next-line import/no-unresolved
 import { FormularioReporte } from '@valle-del-sol/reporte-module';
 import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO, fetchDashboardCombinado } from '@/services/apiGateway';
@@ -21,44 +22,90 @@ export default function MapaScreen() {
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapaListo, setMapaListo] = useState(false);
+  
+// ==========================================
+  // 1. FUNCIÓN COMPARTIDA PARA CARGAR EL MAPA
+  // ==========================================
+  const cargarDatosDelMapa = async () => {
+    const dashboardData = await fetchDashboardCombinado();
+      
+      // 🚨 EL SUERO DE LA VERDAD: Imprime todo el objeto crudo en la terminal
+      console.log("🕵️‍♂️ DATOS CRUDOS:", JSON.stringify(dashboardData, null, 2));
+    setDataLoading(true);
+    setError(null);
+    try {
+      console.log("📥 [UI] Descargando datos...");
+      const dashboardData = await fetchDashboardCombinado();
+      
+      const focosVerificados = (dashboardData.focos || []).filter(
+        (f: any) => f.verificado === true
+      );
+      const reportesVerificados = (dashboardData.reportes || []).filter(
+        (r: any) => r.verificado === true
+      );
 
-  useEffect(() => {
-const loadData = async () => {
-      setDataLoading(true);
-      setError(null);
-      try {
-        console.log("👀 [UI] Iniciando loadData en mapa.tsx..."); // TRAMPA DE INICIO
-        
-        // Llamamos a nuestro endpoint público del BFF en lugar de los protegidos
-        const dashboardData = await fetchDashboardCombinado();
-        
-        console.log("✅ [UI] Datos recibidos con éxito"); // TRAMPA DE ÉXITO
+      const puntosVerificados = [...focosVerificados, ...reportesVerificados];
+      console.log(`🔥 [UI] Puntos verificados para el mapa: ${puntosVerificados.length}`);
+      
+      // SOLUCIÓN AL ERROR 1: Agregamos "as any[]" para evitar el error de TypeScript
+      setFocos(puntosVerificados.reverse() as any[]);
+      setReportes(dashboardData.reportes.reverse() as any[]);
+    } catch (err: any) {
+      console.error("❌ [UI] Error:", err.message);
+      setError('Error al cargar datos del mapa.');
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
-        // Guardamos los datos en los estados
-        setFocos(dashboardData.focos.reverse());
-        setReportes(dashboardData.reportes.reverse());
+  // ==========================================
+  // 2. EL DESCARGADOR AUTOMÁTICO (useFocusEffect)
+  // ==========================================
+  useFocusEffect(
+    React.useCallback(() => {
+      // Solo llama a la función de arriba cuando entras a la pantalla
+      cargarDatosDelMapa();
+    }, [])
+  );
 
-        // Inyectamos los focos una vez que el WebView los tenga listos
-        if (webViewRef.current) {
-          webViewRef.current.injectJavaScript(`window.agregarFocos('${JSON.stringify(dashboardData.focos)}')`);
+  // ... (AQUÍ SE QUEDA TU useEffect INYECTOR DEL MAPA INTACTO) ...
+useEffect(() => {
+    // Solo enviamos los datos si el WebView ya cargó y tenemos puntos verificados
+    if (mapaListo && webViewRef.current && focos.length > 0) {
+      console.log(`🚀 [Puente] Inyectando ${focos.length} puntos al mapa HTML`);
+      
+      // 1. Convertimos tus focos a texto JSON
+      const datosGenerados = JSON.stringify(focos);
+      
+      // 2. Armamos el script que llama a TU función window.agregarFocos
+      // Ojo: Tu HTML usa JSON.parse(), así que se lo mandamos como string
+      const inyeccionJS = `
+        var datos = ${datosGenerados};
+        if (window.agregarFocos) {
+           window.agregarFocos(JSON.stringify(datos));
         }
-      } catch (err: any) {
-        console.log("❌ [UI] Error atrapado en mapa.tsx:", err.message); // TRAMPA DE ERROR
-        setError(err.message || 'Error al cargar los datos');
-      } finally {
-        setDataLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
+        true; // Retorno obligatorio para evitar warnings en Android
+      `;
+      
+      // 3. Disparamos las coordenadas hacia el HTML
+      webViewRef.current.injectJavaScript(inyeccionJS);
+    }
+  }, [focos, mapaListo]);
 
+  // ==========================================
+  // 3. EL ENVÍO DEL REPORTE CORREGIDO
+  // ==========================================
   const handleReportSubmit = async (data: ReporteDTO) => {
     try {
       setLoading(true);
       await enviarReporte(data);
-      Alert.alert('Éxito', 'Reporte enviado a Kafka');
+      Alert.alert('Éxito', 'Reporte enviado al sistema central.');
       setModalVisible(false);
+
+      // SOLUCIÓN AL ERROR 2: Llamamos a la nueva función compartida para refrescar el mapa
+      await cargarDatosDelMapa(); 
+      
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo enviar el reporte');
     } finally {
@@ -80,7 +127,7 @@ const loadData = async () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.mapContainer}>
-        {dataLoading ? (
+        {dataLoading && focos.length === 0 ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Cargando mapa...</Text>
@@ -95,10 +142,13 @@ const loadData = async () => {
               ref={webViewRef}
               source={require('../../assets/mapa.html')}
               style={styles.webview}
-              injectedJavaScriptBeforeContentLoaded={`window.agregarFocos('${JSON.stringify(focos)}')`}
               javaScriptEnabled={true}
               domStorageEnabled={true}
               onMessage={onMessage}
+              onLoadEnd={() => {
+                console.log("✅ [UI] WebView cargó el HTML");
+                setMapaListo(true);
+              }}
             />
           </>
         )}
