@@ -101,7 +101,7 @@ export default function LoginScreen() {
   const handleTestBackend = async () => {
     console.log('Probar Conexión al Backend apretado');
     try {
-      const response = await fetch('http://192.168.1.16:8080/api/reportes');
+      const response = await fetch('http://192.168.1.19:8080/api/reportes');
       
       console.log('Código de respuesta del servidor:', response.status);
       
@@ -139,7 +139,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButton}>Cerrar Sesión</Text>
+              <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </View>):(
            //En el caso de que no se encuentre un usuario autenticado, se mostrará el siguiente mensaje
@@ -176,12 +176,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 16,
     color: '#333',
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     marginTop: 8,
+    marginBottom: 24,
     textAlign: 'center',
+    paddingHorizontal: 16,
   },
   buttonContainer: {
     gap: 16,
@@ -224,6 +227,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginTop: 16,
+    marginBottom: 16,
+    width: '80%',
     gap: 8,
   },
   testButtonText: {
@@ -255,17 +260,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     color: '#333',
+    textAlign: 'center',
   },
   emailText: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 40,
+    marginBottom: 20,
+    textAlign: 'center',
   },
   logoutButton: {
     backgroundColor: '#FF3B30', // Botón rojo para salir
-    padding: 15,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     width: '80%',
     alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
