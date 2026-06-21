@@ -34,6 +34,19 @@
             shadowSize: [41, 41]
         });
 
+        // Estilización de marcador azul para la selección temporal del usuario
+        var blueIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // Variable para rastrear el marcador seleccionado y no crear múltiples pines
+        var marcadorTemporal = null;
+
         // Función global para ser llamada desde React Native
         window.agregarFocos = function(jsonString) {
             try {
@@ -47,8 +60,19 @@
             }
         };
 
-        // Evento de click para enviar coordenadas a React Native
+        // Evento táctil de clic para dibujar pin temporal y despachar coordenadas
         map.on('click', function(e) {
+            // 1. LÓGICA VISUAL: Dibujar o mover el pin azul
+            if (marcadorTemporal) {
+                // Si el pin ya existe, simplemente lo movemos a la nueva posición
+                marcadorTemporal.setLatLng(e.latlng);
+            } else {
+                // Si no existe, lo creamos por primera vez
+                marcadorTemporal = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
+                marcadorTemporal.bindPopup("<b>Ubicación seleccionada</b><br>Aquí se creará tu reporte.").openPopup();
+            }
+
+            // 2. LÓGICA DE DATOS: Despachar coordenadas hacia React Native
             if (window.ReactNativeWebView) {
                 window.ReactNativeWebView.postMessage(JSON.stringify({
                     tipo: 'NUEVA_UBICACION',
