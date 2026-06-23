@@ -9,10 +9,12 @@ import { FormularioReporte } from '@valle-del-sol/reporte-module';
 import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO, fetchDashboardCombinado } from '@/services/apiGateway';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { UbicacionContext } from '../../context/UbicacionContext';
+import * as Location from 'expo-location';
 
 export default function MapaScreen() {
   const webViewRef = useRef<WebView>(null);
   const ubicacionContext = useContext(UbicacionContext);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,6 +25,8 @@ export default function MapaScreen() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapaListo, setMapaListo] = useState(false);
+
+  
   
 // ==========================================
   // 1. FUNCIÓN COMPARTIDA PARA CARGAR EL MAPA
@@ -112,6 +116,35 @@ useEffect(() => {
       setLoading(false);
     }
   };
+
+useEffect(() => {
+  const iniciarGPS = async () => {
+    // TypeScript validará que 'Location' esté importado correctamente
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+
+    // Guardamos la suscripción en nuestra referencia tipada
+    locationSubscriptionRef.current = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+      (location) => {
+        const { latitude, longitude } = location.coords;
+        // Inyectamos de forma segura usando el operador '?' de TypeScript
+        webViewRef.current?.injectJavaScript(`actualizarPuntoAzul(${latitude}, ${longitude}); true;`);
+      }
+    );
+  };
+
+  iniciarGPS();
+
+  // Función de limpieza al cerrar la pantalla
+  return () => {
+    if (locationSubscriptionRef.current) {
+      locationSubscriptionRef.current.remove();
+    }
+  };
+}, []);
+  
+
 
   const onMessage = (event: any) => {
     try {

@@ -60,6 +60,28 @@
             }
         };
 
+                // 1. Variable global para guardar nuestro punto azul y no crear infinitos puntos
+        let marcadorUsuario = null; 
+
+        // 2. Esta es la función exacta que React Native va a llamar desde afuera
+        function actualizarPuntoAzul(lat, lng) {
+        
+        if (marcadorUsuario) {
+            // Si el punto azul ya existe en el mapa, simplemente lo movemos a la nueva posición
+            marcadorUsuario.setLatLng([lat, lng]);
+        } else {
+            // Si es la primera vez que recibimos el GPS, creamos el punto azul
+            marcadorUsuario = L.circleMarker([lat, lng], {
+            color: '#FFFFFF',      // Borde blanco
+            fillColor: '#007AFF',  // Relleno azul estilo GPS
+            fillOpacity: 1,
+            weight: 3,             // Grosor del borde
+            radius: 8              // Tamaño del punto
+            }).addTo(map); // 'map' es tu variable de Leaflet
+
+            
+        }}
+
         // Evento táctil de clic para dibujar pin temporal y despachar coordenadas
         map.on('click', function(e) {
             // 1. LÓGICA VISUAL: Dibujar o mover el pin azul
