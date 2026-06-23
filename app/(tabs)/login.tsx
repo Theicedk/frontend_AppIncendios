@@ -7,6 +7,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as WebBrowser from 'expo-web-browser';
 //Import general de expo para llegar hacia un inicio de sesión (en nuestro caso auth0)
 import * as AuthSession from 'expo-auth-session';
+//Desencriptador de JWT para poder leer los scopes del token y dar acceso al usuario
+import { jwtDecode } from 'jwt-decode';
 
 
 //funcion que verifica que una vez que se termine de verificar con auth0 se cierre la ventana
@@ -28,10 +30,13 @@ export default function LoginScreen() {
     clientId: 'JDRWSan8BqKkpWlGH5IutSE4ZXnyllNF',
     scopes: ['openid', 'profile', 'email'],
     redirectUri: redirectUri,
+    extraParams: {audience: 'https://api-app-incendios-auth0/',}
   }, discovery);
 
   //Creamos una variable de estado la cual cambiará una vez el usuario ingrese
   const [user, setUser] = useState<any>(null);
+  //Variable de estado para guardar los permisos del usuario
+  const [permisos, setPermisos] = useState<string[]>([]);
 
   //Creamos una funcion para que una vez se tenga el token del usuario, se haga un fetch
   //hacia un endpoint de auth0 para que este nos devuelva los datos del usuario
@@ -56,7 +61,14 @@ export default function LoginScreen() {
 
   //2.- Escuchamos al usuario cuando vuelva de la autenticación
   useEffect(() => {
+    
     console.log('Redirigido a la siguiente URL: ', redirectUri);
+
+    if (result?.type === 'error' || result?.type === 'dismiss') {
+    // 👇 Solo pasamos la variable 'result' completa
+    console.error('Auth0 rechazó la petición. Detalle:', result);
+    return;
+  }
     //Verifica si el resultado de la autenticación es exitoso
     if(result?.type === 'success'){
 
@@ -78,6 +90,15 @@ export default function LoginScreen() {
         //Si se obtiene el token, se llama a la función para obtener la información del usuario
         if(tokenResult?.accessToken){
           fetchUserInfo(tokenResult.accessToken);
+          try {
+            //Decodificamos el token para obtener los permisos del usuario
+            const TokenDecodificado= jwtDecode(tokenResult.accessToken) as any;
+            //Guardamos los permisos en el estado
+            setPermisos(TokenDecodificado.permissions || []);
+            console.log('Permisos del usuario:', TokenDecodificado.permissions);
+          } catch (error) {
+            console.error('Error al decodificar el token:', error);
+          }
         }
       })
       //Y sino se muestra el error en consola
@@ -92,12 +113,27 @@ export default function LoginScreen() {
     promptAsync();
   };
 
-//Boton de logout
+
+
+
+
+
+
+
+  //Boton de logout
   const handleLogout = () => {
     console.log('Cerrar Sesión apretado');
     setUser(null); // Limpiamos los datos del usuario
   };
 
+
+
+
+
+
+
+
+  //Boton para probar la conexión al backend
   const handleTestBackend = async () => {
     console.log('Probar Conexión al Backend apretado');
     try {
