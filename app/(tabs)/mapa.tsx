@@ -26,7 +26,8 @@ export default function MapaScreen() {
   const [error, setError] = useState<string | null>(null);
   const [mapaListo, setMapaListo] = useState(false);
 
-  
+  const isMapReady = useRef<boolean>(false);
+  const lastLocation = useRef<{latitude: number, longitude: number} | null>(null);
   
 // ==========================================
   // 1. FUNCIÓN COMPARTIDA PARA CARGAR EL MAPA
@@ -129,7 +130,11 @@ useEffect(() => {
       (location) => {
         const { latitude, longitude } = location.coords;
         // Inyectamos de forma segura usando el operador '?' de TypeScript
-        webViewRef.current?.injectJavaScript(`actualizarPuntoAzul(${latitude}, ${longitude}); true;`);
+        console.log("📍 GPS detectado:", latitude, longitude); //
+        lastLocation.current = { latitude, longitude };
+        if (isMapReady.current) {
+          webViewRef.current?.injectJavaScript(`actualizarPuntoAzul(${latitude}, ${longitude}); true;`);
+        }
       }
     );
   };
@@ -174,6 +179,8 @@ useEffect(() => {
             <WebView
               ref={webViewRef}
               source={require('../../assets/mapa.html')}
+              onLoad={() => { isMapReady.current = true; if (lastLocation.current) {const{latitude, longitude} = lastLocation.current; webViewRef.current?.injectJavaScript(`actualizarPuntoAzul(${latitude}, ${longitude}); true;`);}}}
+                
               style={styles.webview}
               javaScriptEnabled={true}
               domStorageEnabled={true}
