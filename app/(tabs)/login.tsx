@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 //Desencriptador de JWT para poder leer los scopes del token y dar acceso al usuario
 import { jwtDecode } from 'jwt-decode';
+import * as SecureStore from 'expo-secure-store';
 
 
 //funcion que verifica que una vez que se termine de verificar con auth0 se cierre la ventana
@@ -85,7 +86,7 @@ export default function LoginScreen() {
         },
       }, discovery)
       //Una vez enviado los datos y obteniendo el token lo mostraremos en consola
-      .then((tokenResult) => {
+      .then(async (tokenResult) => {
         console.log('Token de acceso obtenido:', tokenResult?.accessToken);
         //Si se obtiene el token, se llama a la función para obtener la información del usuario
         if(tokenResult?.accessToken){
@@ -96,6 +97,8 @@ export default function LoginScreen() {
             //Guardamos los permisos en el estado
             setPermisos(TokenDecodificado.permissions || []);
             console.log('Permisos del usuario:', TokenDecodificado.permissions);
+            await SecureStore.setItemAsync('access_token', tokenResult.accessToken);
+            await SecureStore.setItemAsync('permisos_usuario', JSON.stringify(TokenDecodificado.permissions || []));
           } catch (error) {
             console.error('Error al decodificar el token:', error);
           }
@@ -120,9 +123,16 @@ export default function LoginScreen() {
 
 
 
-  //Boton de logout
-  const handleLogout = () => {
+// Boton de logout
+  const handleLogout = async () => {
     console.log('Cerrar Sesión apretado');
+    try {
+      await SecureStore.deleteItemAsync('permisos_usuario');
+      await SecureStore.deleteItemAsync('access_token');
+    } catch (error) {
+      console.error('Error al borrar la bóveda:', error);
+    } // 👈 ¡Faltaba este bloque catch!
+    
     setUser(null); // Limpiamos los datos del usuario
   };
 

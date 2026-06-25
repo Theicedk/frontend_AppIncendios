@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchDashboardCombinado, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { jwtDecode } from 'jwt-decode';
+import * as SecureStore from 'expo-secure-store';
 
 export default function MapaScreen() {
   const router = useRouter();
@@ -14,6 +16,33 @@ export default function MapaScreen() {
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [esFuncionario, setEsFuncionario] = useState<boolean>(false);
+
+
+  useFocusEffect(
+    useCallback(() => {
+      // Creamos una función async interna para poder usar los await
+      const cargarDatosSeguros = async () => {
+        try {
+          // Await para obtener los permisos del usuario desde SecureStore
+          const permisosGuardados = await SecureStore.getItemAsync('permisos_usuario');
+        
+        if (permisosGuardados) {
+          // Parseamos el texto para utilizarlo
+          const arregloPermisos = JSON.parse(permisosGuardados);
+          setEsFuncionario(arregloPermisos.includes('update:reportes'));
+        }else{
+          setEsFuncionario(false);
+        }
+      }catch (error) {
+          console.error("Error leyendo de SecureStore:", error);
+          setEsFuncionario(false); // Por seguridad, ocultamos si hay error
+        }
+    };
+
+    cargarDatosSeguros();
+  }, []));
+
 
   useEffect(() => {
     cargarDatos();
@@ -34,6 +63,7 @@ export default function MapaScreen() {
       setLoading(false);
     }
   };
+
 
   if (loading) {
     return (
@@ -138,13 +168,13 @@ export default function MapaScreen() {
         </View>
 
       </ScrollView>
-
+      {esFuncionario && (
       <TouchableOpacity 
         style={styles.floatingButton} 
         onPress={() => router.push('/funcionario')}
       >
         <Ionicons name="shield-checkmark" size={24} color={Colors.onPrimary} />
-      </TouchableOpacity>
+      </TouchableOpacity>)}
     </SafeAreaView>
   );
 }
