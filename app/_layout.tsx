@@ -24,8 +24,9 @@ export default function RootLayout() {
       try {
         // 1. Revisamos si el usuario dejó su token guardado la última vez
         const token = await SecureStore.getItemAsync('access_token');
+        const perfilGuardado = await SecureStore.getItemAsync('perfil_usuario');
         
-        if (token) {
+        if (token && perfilGuardado) {
           // Si hay token, lo mandamos directo a la app (Index)
           // Usamos un pequeño setTimeout para darle tiempo a Expo Router de montarse
           setTimeout(() => router.replace('/'), 100); 

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Button, Image } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +10,7 @@ import * as AuthSession from 'expo-auth-session';
 //Desencriptador de JWT para poder leer los scopes del token y dar acceso al usuario
 import { jwtDecode } from 'jwt-decode';
 import * as SecureStore from 'expo-secure-store';
+import { useFocusEffect } from 'expo-router';
 
 
 //funcion que verifica que una vez que se termine de verificar con auth0 se cierre la ventana
@@ -39,6 +40,8 @@ export default function LoginScreen() {
   //Variable de estado para guardar los permisos del usuario
   const [permisos, setPermisos] = useState<string[]>([]);
 
+  const [cargando, setCargando] = useState<boolean>(true);
+
   //Creamos una funcion para que una vez se tenga el token del usuario, se haga un fetch
   //hacia un endpoint de auth0 para que este nos devuelva los datos del usuario
   const fetchUserInfo = async (token: string) => {
@@ -52,7 +55,8 @@ export default function LoginScreen() {
       
       //Esperamos la respuesta de el  fetch y luego guardamos los datos del usuario en el estado
       const userInfo = await response.json();
-      setUser(userInfo); 
+      setUser(userInfo);
+      await SecureStore.setItemAsync('perfil_usuario', JSON.stringify(userInfo)); 
       //Para luego mostrar en consola los datos del usuario
       console.log('Información del usuario recibida con exito :', userInfo);
     }catch(error){
@@ -111,6 +115,37 @@ export default function LoginScreen() {
     }
   }, [result,redirectUri,request]);
 
+useFocusEffect(
+    useCallback(() => {
+      const recuperarUsuarioDeBoveda = async () => {
+        try {
+          const perfilGuardado = await SecureStore.getItemAsync('perfil_usuario');
+          
+          if (perfilGuardado) {
+            // 🪙 Si el token existe, lo decodificamos para recuperar el nombre, correo, etc.
+            const datosUsuario = JSON.parse(perfilGuardado);
+            setUser(datosUsuario);
+          } else {
+            // Si no hay token, nos aseguramos de que el estado quede limpio
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Error al recuperar datos del usuario:", error);
+          setUser(null);
+        } finally {
+          setCargando(false);
+        }
+      };
+
+      recuperarUsuarioDeBoveda();
+    }, [])
+    
+  );
+
+
+
+
+
   const handleLogin = () => {
     console.log('Iniciar Sesión apretado');
     promptAsync();
@@ -129,9 +164,10 @@ export default function LoginScreen() {
     try {
       await SecureStore.deleteItemAsync('permisos_usuario');
       await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('perfil_usuario');
     } catch (error) {
-      console.error('Error al borrar la bóveda:', error);
-    } // 👈 ¡Faltaba este bloque catch!
+      console.error('Error al borrar', error);
+    } 
     
     setUser(null); // Limpiamos los datos del usuario
   };

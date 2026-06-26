@@ -1,4 +1,5 @@
 import { DashboardDTO } from '../types/DashboardDTO';
+import * as SecureStore from 'expo-secure-store';
 
 export type ReporteDTO = {
   descripcion: string;
@@ -53,10 +54,12 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
+    const token = await SecureStore.getItemAsync('access_token');
     const response = await fetch(`${BASE_URL}/reportes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(data),
     });
