@@ -44,11 +44,8 @@ export default function MapaScreen() {
   }, []));
 
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
 
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -62,7 +59,14 @@ export default function MapaScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); 
+
+ 
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [cargarDatos])
+  );
 
 
   if (loading) {

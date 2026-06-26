@@ -55,6 +55,9 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
     const token = await SecureStore.getItemAsync('access_token');
+    if (!token) {
+      throw new Error('Para enviar un reporte debes iniciar sesión.');
+    }
     const response = await fetch(`${BASE_URL}/reportes`, {
       method: 'POST',
       headers: {
@@ -65,6 +68,9 @@ export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
     });
     
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Tu sesión ha expirado o debes iniciar sesión para enviar un reporte.');
+      }
       throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
     }
   } catch (error: any) {
@@ -74,8 +80,12 @@ export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
 
 export const verificarReporte = async (id: number): Promise<void> => {
   try {
+    const token = await SecureStore.getItemAsync('access_token');
     const response = await fetch(`${BASE_URL}/reportes/${id}/verificar`, {
       method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
     
     if (!response.ok) {
