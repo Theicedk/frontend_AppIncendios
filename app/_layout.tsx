@@ -4,11 +4,27 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
-import { View, ActivityIndicator } from 'react-native';
+import { Platform, View, ActivityIndicator } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { UbicacionProvider } from '../context/UbicacionContext';
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'access_token',
+  PERFIL_USUARIO: 'perfil_usuario',
+};
+
+const getItemSafe = async (key: string): Promise<string | null> => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem(key);
+  }
+  try {
+    const { getItemAsync } = await import('expo-secure-store');
+    return await getItemAsync(key);
+  } catch {
+    return null;
+  }
+};
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -16,29 +32,21 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  // Estado para saber si la aplicación está lista para renderizar
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const verificarSesionPersistente = async () => {
       try {
-        // 1. Revisamos si el usuario dejó su token guardado la última vez
-        const token = await SecureStore.getItemAsync('access_token');
-        const perfilGuardado = await SecureStore.getItemAsync('perfil_usuario');
-        
-        if (token && perfilGuardado) {
-          // Si hay token, lo mandamos directo a la app (Index)
-          // Usamos un pequeño setTimeout para darle tiempo a Expo Router de montarse
-          setTimeout(() => router.replace('/'), 100); 
-        } else {
-          // Si no hay token (o cerró sesión), lo mandamos al Login
-          setTimeout(() => router.replace('/login'), 100);
-        }
+        const token = await getItemSafe(STORAGE_KEYS.ACCESS_TOKEN);
+        const perfilGuardado = await getItemSafe(STORAGE_KEYS.PERFIL_USUARIO);
+
+        const destino = token && perfilGuardado ? '/' : '/login';
+        setTimeout(() => router.replace(destino), 100);
       } catch (error) {
         console.error("Error al leer la sesión guardada:", error);
-        router.replace('/login'); // Por seguridad, si hay error, al login
+        setTimeout(() => router.replace('/login'), 100);
       } finally {
-        setIsReady(true); // Ya terminamos de revisar
+        setIsReady(true);
       }
     };
 

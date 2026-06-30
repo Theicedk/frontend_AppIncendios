@@ -41,7 +41,10 @@
         }
       ],
       "expo-web-browser",
-      "react-native-auth0",
+      ["react-native-auth0", {
+        "domain": "dev-ecmx143cjy36oshj.us.auth0.com",
+        "customScheme": "valledelsol"
+      }],
       "expo-secure-store"
     ],
     "experiments": {

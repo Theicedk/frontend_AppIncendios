@@ -1,49 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchDashboardCombinado, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { jwtDecode } from 'jwt-decode';
-import * as SecureStore from 'expo-secure-store';
+import { useFocusEffect } from 'expo-router';
 
 export default function MapaScreen() {
-  const router = useRouter();
   const [focos, setFocos] = useState<FocoMapaDTO[]>([]);
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [esFuncionario, setEsFuncionario] = useState<boolean>(false);
-
-
-  useFocusEffect(
-    useCallback(() => {
-      // Creamos una función async interna para poder usar los await
-      const cargarDatosSeguros = async () => {
-        try {
-          // Await para obtener los permisos del usuario desde SecureStore
-          const permisosGuardados = await SecureStore.getItemAsync('permisos_usuario');
-        
-        if (permisosGuardados) {
-          // Parseamos el texto para utilizarlo
-          const arregloPermisos = JSON.parse(permisosGuardados);
-          setEsFuncionario(arregloPermisos.includes('update:reportes'));
-        }else{
-          setEsFuncionario(false);
-        }
-      }catch (error) {
-          console.error("Error leyendo de SecureStore:", error);
-          setEsFuncionario(false); // Por seguridad, ocultamos si hay error
-        }
-    };
-
-    cargarDatosSeguros();
-  }, []));
-
-
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -172,13 +140,6 @@ export default function MapaScreen() {
         </View>
 
       </ScrollView>
-      {esFuncionario && (
-      <TouchableOpacity 
-        style={styles.floatingButton} 
-        onPress={() => router.push('/funcionario')}
-      >
-        <Ionicons name="shield-checkmark" size={24} color={Colors.onPrimary} />
-      </TouchableOpacity>)}
     </SafeAreaView>
   );
 }
@@ -395,21 +356,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.onSurfaceVariant,
     marginTop: 8,
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    backgroundColor: Colors.primary,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
 });

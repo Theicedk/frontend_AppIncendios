@@ -1,5 +1,5 @@
 import { DashboardDTO } from '../types/DashboardDTO';
-import * as SecureStore from 'expo-secure-store';
+import { getItemAsync } from 'expo-secure-store';
 
 export type ReporteDTO = {
   descripcion: string;
@@ -24,7 +24,8 @@ export type ReporteListaDTO = {
   verificado?: boolean;
 };
 
-const BASE_URL = 'http://192.168.1.19:8080/api';
+const BACKEND_IP = "192.168.1.19";
+const BASE_URL = `http://${BACKEND_IP}:8080/api`;
 
 export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
   try {
@@ -54,7 +55,7 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
-    const token = await SecureStore.getItemAsync('access_token');
+    const token = await getItemAsync('access_token');
     if (!token) {
       throw new Error('Para enviar un reporte debes iniciar sesión.');
     }
@@ -75,24 +76,6 @@ export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
     }
   } catch (error: any) {
     throw new Error(error.message || 'Error enviando reporte');
-  }
-};
-
-export const verificarReporte = async (id: number): Promise<void> => {
-  try {
-    const token = await SecureStore.getItemAsync('access_token');
-    const response = await fetch(`${BASE_URL}/reportes/${id}/verificar`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
-    }
-  } catch (error: any) {
-    throw new Error(error.message || 'Error verificando reporte');
   }
 };
 

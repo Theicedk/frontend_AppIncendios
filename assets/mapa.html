@@ -47,7 +47,19 @@
         // Variable para rastrear el marcador seleccionado y no crear múltiples pines
         var marcadorTemporal = null;
 
-        // Función global para ser llamada desde React Native
+        function despacharCoordenadas(lat, lng) {
+            var mensaje = JSON.stringify({ tipo: 'NUEVA_UBICACION', lat: lat, lng: lng });
+            // Native: ReactNativeWebView postMessage
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(mensaje);
+            }
+            // Web: postMessage al parent (iframe)
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(JSON.parse(mensaje), '*');
+            }
+        }
+
+        // Función global para ser llamada desde React Native (injectJavaScript)
         window.agregarFocos = function(jsonString) {
             try {
                 var focos = JSON.parse(jsonString);
@@ -60,48 +72,46 @@
             }
         };
 
-                // 1. Variable global para guardar nuestro punto azul y no crear infinitos puntos
-        let marcadorUsuario = null; 
+        // Variable global para guardar nuestro punto azul y no crear infinitos puntos
+        let marcadorUsuario = null;
 
-        // 2. Esta es la función exacta que React Native va a llamar desde afuera
         function actualizarPuntoAzul(lat, lng) {
-        
-        if (marcadorUsuario) {
-            // Si el punto azul ya existe en el mapa, simplemente lo movemos a la nueva posición
-            marcadorUsuario.setLatLng([lat, lng]);
-        } else {
-            // Si es la primera vez que recibimos el GPS, creamos el punto azul
-            marcadorUsuario = L.circleMarker([lat, lng], {
-            color: '#FFFFFF',      // Borde blanco
-            fillColor: '#007AFF',  // Relleno azul estilo GPS
-            fillOpacity: 1,
-            weight: 3,             // Grosor del borde
-            radius: 8              // Tamaño del punto
-            }).addTo(map); // 'map' es tu variable de Leaflet
+            if (marcadorUsuario) {
+                marcadorUsuario.setLatLng([lat, lng]);
+            } else {
+                marcadorUsuario = L.circleMarker([lat, lng], {
+                    color: '#FFFFFF',
+                    fillColor: '#007AFF',
+                    fillOpacity: 1,
+                    weight: 3,
+                    radius: 8
+                }).addTo(map);
+            }
+        }
 
-            
-        }}
+        // Escuchar mensajes del padre (web) para comandos remotos
+        window.addEventListener('message', function(event) {
+            var data = event.data;
+            if (!data || !data.type) return;
+            switch (data.type) {
+                case 'AGREGAR_FOCOS':
+                    if (data.payload) window.agregarFocos(data.payload);
+                    break;
+                case 'ACTUALIZAR_GPS':
+                    if (data.lat != null && data.lng != null) actualizarPuntoAzul(data.lat, data.lng);
+                    break;
+            }
+        });
 
         // Evento táctil de clic para dibujar pin temporal y despachar coordenadas
         map.on('click', function(e) {
-            // 1. LÓGICA VISUAL: Dibujar o mover el pin azul
             if (marcadorTemporal) {
-                // Si el pin ya existe, simplemente lo movemos a la nueva posición
                 marcadorTemporal.setLatLng(e.latlng);
             } else {
-                // Si no existe, lo creamos por primera vez
                 marcadorTemporal = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
                 marcadorTemporal.bindPopup("<b>Ubicación seleccionada</b><br>Aquí se creará tu reporte.").openPopup();
             }
-
-            // 2. LÓGICA DE DATOS: Despachar coordenadas hacia React Native
-            if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                    tipo: 'NUEVA_UBICACION',
-                    lat: e.latlng.lat,
-                    lng: e.latlng.lng
-                }));
-            }
+            despacharCoordenadas(e.latlng.lat, e.latlng.lng);
         });
     </script>
 </body>

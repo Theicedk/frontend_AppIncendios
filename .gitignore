@@ -88,3 +88,6 @@ __pycache__/
 # Archivos de documentación privada/instrucciones
 ARCHITECTURE.md
 .github/gemini-instructions.md
+CONTEXTO.md
+opencode.json
+.opencode/

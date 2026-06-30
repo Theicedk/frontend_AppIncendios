@@ -9,7 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 //Desencriptador de JWT para poder leer los scopes del token y dar acceso al usuario
 import { jwtDecode } from 'jwt-decode';
-import * as SecureStore from 'expo-secure-store';
+import { getItemAsync, setItemAsync, deleteItemAsync } from 'expo-secure-store';
 import { useFocusEffect } from 'expo-router';
 
 
@@ -56,7 +56,7 @@ export default function LoginScreen() {
       //Esperamos la respuesta de el  fetch y luego guardamos los datos del usuario en el estado
       const userInfo = await response.json();
       setUser(userInfo);
-      await SecureStore.setItemAsync('perfil_usuario', JSON.stringify(userInfo)); 
+      await setItemAsync('perfil_usuario', JSON.stringify(userInfo)); 
       //Para luego mostrar en consola los datos del usuario
       console.log('Información del usuario recibida con exito :', userInfo);
     }catch(error){
@@ -101,8 +101,8 @@ export default function LoginScreen() {
             //Guardamos los permisos en el estado
             setPermisos(TokenDecodificado.permissions || []);
             console.log('Permisos del usuario:', TokenDecodificado.permissions);
-            await SecureStore.setItemAsync('access_token', tokenResult.accessToken);
-            await SecureStore.setItemAsync('permisos_usuario', JSON.stringify(TokenDecodificado.permissions || []));
+            await setItemAsync('access_token', tokenResult.accessToken);
+            await setItemAsync('permisos_usuario', JSON.stringify(TokenDecodificado.permissions || []));
           } catch (error) {
             console.error('Error al decodificar el token:', error);
           }
@@ -119,7 +119,7 @@ useFocusEffect(
     useCallback(() => {
       const recuperarUsuarioDeBoveda = async () => {
         try {
-          const perfilGuardado = await SecureStore.getItemAsync('perfil_usuario');
+          const perfilGuardado = await getItemAsync('perfil_usuario');
           
           if (perfilGuardado) {
             // 🪙 Si el token existe, lo decodificamos para recuperar el nombre, correo, etc.
@@ -162,9 +162,9 @@ useFocusEffect(
   const handleLogout = async () => {
     console.log('Cerrar Sesión apretado');
     try {
-      await SecureStore.deleteItemAsync('permisos_usuario');
-      await SecureStore.deleteItemAsync('access_token');
-      await SecureStore.deleteItemAsync('perfil_usuario');
+      await deleteItemAsync('permisos_usuario');
+      await deleteItemAsync('access_token');
+      await deleteItemAsync('perfil_usuario');
     } catch (error) {
       console.error('Error al borrar', error);
     } 
