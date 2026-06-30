@@ -7,6 +7,8 @@ import { enviarReporte, ReporteDTO, FocoMapaDTO, ReporteListaDTO, fetchDashboard
 import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { UbicacionContext } from '../../context/UbicacionContext';
+import { isAuthenticated } from '@/services/authSession';
+import { useRouter } from 'expo-router';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -36,8 +38,10 @@ export default function MapaScreen() {
   const mapRef = useRef<any>(null);
   const ubicacionContext = useContext(UbicacionContext);
   const locationWatchRef = useRef<number | (() => void) | null>(null);
+  const router = useRouter();
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focos, setFocos] = useState<(FocoMapaDTO | ReporteListaDTO)[]>([]);
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
@@ -54,11 +58,13 @@ export default function MapaScreen() {
     setError(null);
     try {
       const dashboardData = await fetchDashboardCombinado();
-      const focosVerificados = dashboardData.focos.filter((f: FocoMapaDTO) => f.verificado === true);
-      const reportesVerificados = dashboardData.reportes.filter((r: ReporteListaDTO) => r.verificado === true);
-      const puntosVerificados = [...focosVerificados, ...reportesVerificados].reverse();
 
-      setFocos(puntosVerificados);
+      const todosLosPuntos = [
+        ...(dashboardData.focos || []),
+        ...(dashboardData.reportes || []),
+      ].reverse();
+
+      setFocos(todosLosPuntos);
       setReportes(dashboardData.reportes.reverse());
     } catch (err: any) {
       setError('Error al cargar datos del mapa.');
@@ -118,6 +124,12 @@ export default function MapaScreen() {
 
   // ─── Enviar reporte ────────────────────────────────────────
   const handleReportSubmit = async (data: ReporteDTO) => {
+    const autenticado = await isAuthenticated();
+    if (!autenticado) {
+      setModalVisible(false);
+      setShowLoginModal(true);
+      return;
+    }
     try {
       setLoading(true);
       await enviarReporte(data);
@@ -125,7 +137,12 @@ export default function MapaScreen() {
       setModalVisible(false);
       await cargarDatosDelMapa();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo enviar el reporte');
+      if (error.message?.includes('401') || error.message?.includes('sesión')) {
+        setModalVisible(false);
+        setShowLoginModal(true);
+      } else {
+        Alert.alert('Error', error.message || 'No se pudo enviar el reporte');
+      }
     } finally {
       setLoading(false);
     }
@@ -193,7 +210,7 @@ export default function MapaScreen() {
         {IS_WEB ? (
           <iframe
             ref={mapRef}
-            src="/assets/mapa.html"
+            src={require('../../assets/mapa.html')}
             style={{ width: '100%', height: '100%', border: 'none' }}
             onLoad={handleMapLoad}
           />
@@ -230,6 +247,41 @@ export default function MapaScreen() {
             ) : (
               <FormularioReporte onSubmit={handleReportSubmit} />
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={showLoginModal}
+        animationType="fade"
+        onRequestClose={() => setShowLoginModal(false)}
+      >
+        <View style={styles.loginModalBackdrop}>
+          <View style={styles.loginModalCard}>
+            <Text style={styles.loginModalTitle}>Necesitas iniciar sesión</Text>
+            <Text style={styles.loginModalMessage}>
+              Para crear un reporte de incendio debes iniciar sesión primero.
+            </Text>
+            <View style={styles.loginModalActions}>
+              <TouchableOpacity
+                style={[styles.loginModalButton, styles.loginSecondaryButton]}
+                onPress={() => setShowLoginModal(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.loginSecondaryButtonText}>CERRAR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.loginModalButton, styles.loginPrimaryButton]}
+                onPress={() => {
+                  setShowLoginModal(false);
+                  router.push('/login');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.loginPrimaryButtonText}>IR A INICIAR SESIÓN</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -284,4 +336,26 @@ const styles = StyleSheet.create({
   closeButton: { alignSelf: 'flex-end', padding: 8, marginBottom: 8 },
   closeButtonText: { fontSize: 20, fontWeight: 'bold', color: Colors.onSurfaceVariant },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 200 },
+  loginModalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
+  loginModalCard: {
+    width: '100%', maxWidth: 420, backgroundColor: Colors.background,
+    borderRadius: 20, padding: 22,
+  },
+  loginModalTitle: {
+    color: Colors.onBackground, fontSize: 18, fontWeight: 'bold',
+    marginBottom: 10, textAlign: 'center',
+  },
+  loginModalMessage: {
+    color: Colors.onSurfaceVariant, textAlign: 'center',
+    lineHeight: 22, marginBottom: 20,
+  },
+  loginModalActions: { flexDirection: 'row', gap: 12 },
+  loginModalButton: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  loginSecondaryButton: { backgroundColor: Colors.surfaceVariant },
+  loginPrimaryButton: { backgroundColor: Colors.primary },
+  loginSecondaryButtonText: { color: Colors.onSurface, fontWeight: '800', fontSize: 13 },
+  loginPrimaryButtonText: { color: Colors.onPrimary, fontWeight: '800', fontSize: 13 },
 });

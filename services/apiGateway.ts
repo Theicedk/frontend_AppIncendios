@@ -1,5 +1,5 @@
 import { DashboardDTO } from '../types/DashboardDTO';
-import { getItemAsync } from 'expo-secure-store';
+import { getItem } from './storage';
 
 export type ReporteDTO = {
   descripcion: string;
@@ -24,8 +24,9 @@ export type ReporteListaDTO = {
   verificado?: boolean;
 };
 
-const BACKEND_IP = "192.168.1.19";
+const BACKEND_IP = "192.168.1.16";
 const BASE_URL = `http://${BACKEND_IP}:8080/api`;
+export { BASE_URL };
 
 export const fetchReportes = async (): Promise<ReporteListaDTO[]> => {
   try {
@@ -55,7 +56,7 @@ export const fetchFocos = async (): Promise<FocoMapaDTO[]> => {
 
 export const enviarReporte = async (data: ReporteDTO): Promise<void> => {
   try {
-    const token = await getItemAsync('access_token');
+    const token = await getItem('access_token');
     if (!token) {
       throw new Error('Para enviar un reporte debes iniciar sesión.');
     }

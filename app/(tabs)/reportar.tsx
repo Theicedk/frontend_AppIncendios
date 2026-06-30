@@ -7,7 +7,7 @@ import { enviarReporte, ReporteDTO } from '@/services/apiGateway';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { isAnonymousSession } from '@/services/authSession';
+import { isAuthenticated } from '@/services/authSession';
 import { useRouter } from 'expo-router';
 
 export default function ReportarScreen() {
@@ -16,9 +16,8 @@ export default function ReportarScreen() {
   const router = useRouter();
 
   const handleSubmit = async (data: ReporteDTO) => {
-    // Si no hay sesión, no deja crear el reporte y abre el aviso emergente.
-    if (isAnonymousSession()) {
-      // Mostramos el popup porque un usuario anónimo no puede enviar reportes.
+    const autenticado = await isAuthenticated();
+    if (!autenticado) {
       setShowLoginModal(true);
       return;
     }
@@ -27,10 +26,12 @@ export default function ReportarScreen() {
     try {
       await enviarReporte(data);
       Alert.alert('Éxito', 'Reporte enviado a Kafka');
-      // FormularioReporte debería manejar su propia limpieza de formulario si es posible, 
-      // o se puede forzar pasando una clave. Asumimos que maneja la limpieza o no necesita.
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al enviar reporte');
+      if (error.message?.includes('401') || error.message?.includes('sesión')) {
+        setShowLoginModal(true);
+      } else {
+        Alert.alert('Error', error.message || 'Error al enviar reporte');
+      }
     } finally {
       setLoading(false);
     }

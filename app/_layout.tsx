@@ -4,27 +4,11 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Platform, View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { UbicacionProvider } from '../context/UbicacionContext';
-
-const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  PERFIL_USUARIO: 'perfil_usuario',
-};
-
-const getItemSafe = async (key: string): Promise<string | null> => {
-  if (Platform.OS === 'web') {
-    return localStorage.getItem(key);
-  }
-  try {
-    const { getItemAsync } = await import('expo-secure-store');
-    return await getItemAsync(key);
-  } catch {
-    return null;
-  }
-};
+import { getItem } from '../services/storage';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -37,8 +21,8 @@ export default function RootLayout() {
   useEffect(() => {
     const verificarSesionPersistente = async () => {
       try {
-        const token = await getItemSafe(STORAGE_KEYS.ACCESS_TOKEN);
-        const perfilGuardado = await getItemSafe(STORAGE_KEYS.PERFIL_USUARIO);
+        const token = await getItem('access_token');
+        const perfilGuardado = await getItem('perfil_usuario');
 
         const destino = token && perfilGuardado ? '/' : '/login';
         setTimeout(() => router.replace(destino), 100);

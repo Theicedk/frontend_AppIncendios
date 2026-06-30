@@ -1,21 +1,18 @@
+import { getItem } from './storage';
+
 export type AuthSessionUser = {
   email: string;
 };
 
-// Guarda en memoria el usuario autenticado actual para compartirlo entre pantallas.
-// Esto evita depender solo de un estado local de una pantalla.
 let currentUser: AuthSessionUser | null = null;
 const AUTH_SESSION_KEY = 'frontend_AppIncendios.authSessionUser';
 
-// Comprueba si estamos en web y si el navegador permite usar localStorage.
 const canUseLocalStorage = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
-// Lee la sesión que quedó guardada en el navegador para restaurarla al refrescar.
 const readPersistedUser = (): AuthSessionUser | null => {
   if (!canUseLocalStorage()) {
     return null;
   }
-
   try {
     const rawValue = window.localStorage.getItem(AUTH_SESSION_KEY);
     return rawValue ? (JSON.parse(rawValue) as AuthSessionUser) : null;
@@ -24,30 +21,33 @@ const readPersistedUser = (): AuthSessionUser | null => {
   }
 };
 
-// Actualiza la sesión en memoria cuando el usuario inicia o cierra sesión.
 export const setAuthSessionUser = (user: AuthSessionUser | null) => {
   currentUser = user;
-
-  if (!canUseLocalStorage()) {
-    return;
-  }
-
+  if (!canUseLocalStorage()) return;
   try {
     if (user) {
-      // Si hay usuario, lo guardamos en localStorage para mantener la sesión tras refrescar.
       window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user));
     } else {
-      // Si el usuario cierra sesión, borramos el dato persistido.
       window.localStorage.removeItem(AUTH_SESSION_KEY);
     }
-  } catch {
-    // Si el navegador bloquea localStorage, mantenemos solo la sesión en memoria.
-  }
+  } catch { /* ignorar */ }
 };
 
-// Devuelve el usuario actual para que otras pantallas sepan si hay sesión activa.
-// Primero usa memoria y, si está vacía, intenta restaurar desde localStorage.
 export const getAuthSessionUser = () => currentUser ?? readPersistedUser();
 
-// Indica si la app está en modo anónimo, o sea, sin usuario autenticado.
+/**
+ * Verifica si hay sesión activa revisando tanto el token en storage
+ * (SecureStore en nativo, localStorage en web) como la memoria.
+ * Reemplaza a isAnonymousSession() que nunca funcionó en nativo.
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  const token = await getItem('access_token');
+  return token != null;
+}
+
+/**
+ * @deprecated Usar isAuthenticated() en su lugar.
+ * Esta función nunca funcionó en nativo porque setAuthSessionUser no era llamado
+ * desde el flujo de login y localStorage no existe en iOS/Android.
+ */
 export const isAnonymousSession = () => getAuthSessionUser() === null;
