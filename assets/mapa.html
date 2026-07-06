@@ -34,6 +34,34 @@
             shadowSize: [41, 41]
         });
 
+        // Icono de riesgo (triángulo de advertencia) para zonas de riesgo
+        var riskIcon = L.divIcon({
+            className: '',
+            html: '<div style="background:#FFA000;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;border:2px solid #BF360C;box-shadow:0 2px 6px rgba(0,0,0,0.5);">&#9888;</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -18]
+        });
+
+        // Icono naranja para zonas de riesgo
+        var orangeIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // Icono para compañías de bomberos (escudo azul)
+        var fireStationIcon = L.divIcon({
+            className: '',
+            html: '<div style="background:#1565c0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #42a5f5;box-shadow:0 2px 8px rgba(21,101,192,0.6);"><span style="color:#fff;font-size:16px;line-height:1;">🚒</span></div>',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18]
+        });
+
         // Icono azul para el punto seleccionado temporalmente
         var blueIcon = L.icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -47,16 +75,30 @@
         var selectedMarker = null;
 
         // Función global para ser llamada desde React Native
-        window.agregarFocos = function(jsonString) {
-            try {
-                var focos = JSON.parse(jsonString);
-                focos.forEach(function(foco) {
-                    var marker = L.marker([foco.latitud, foco.longitud], { icon: redIcon }).addTo(map);
-                    marker.bindPopup("<b>Foco #" + foco.id + "</b><br>Estado: " + foco.estado);
-                });
-            } catch (e) {
-                console.error("Error procesando los focos:", e);
-            }
+        window.agregarFocos = function(data) {
+            var focos = Array.isArray(data) ? data : JSON.parse(data);
+            focos.forEach(function(foco) {
+                var marker = L.marker([foco.latitud, foco.longitud], { icon: redIcon }).addTo(map);
+                marker.bindPopup("<b>Foco #" + foco.id + "</b><br>Estado: " + foco.estado);
+            });
+        };
+
+        // Función global para agregar zonas de riesgo
+        window.agregarZonasRiesgo = function(data) {
+            var zonas = Array.isArray(data) ? data : JSON.parse(data);
+            zonas.forEach(function(zona) {
+                var marker = L.marker([zona.latitud, zona.longitud], { icon: orangeIcon }).addTo(map);
+                marker.bindPopup("<b>Zona de Riesgo #" + zona.id + "</b><br>" + zona.descripcion);
+            });
+        };
+
+        // Función global para agregar compañías de bomberos
+        window.agregarCompanias = function(data) {
+            var comps = Array.isArray(data) ? data : JSON.parse(data);
+            comps.forEach(function(c) {
+                var marker = L.marker([c.lat, c.lng], { icon: fireStationIcon }).addTo(map);
+                marker.bindPopup("<b>" + c.nombre + "</b><br>Compañía de Bomberos" + (c.activa ? "" : " (Inactiva)"));
+            });
         };
 
         // Función invocada para limpiar el marcador de selección temporal

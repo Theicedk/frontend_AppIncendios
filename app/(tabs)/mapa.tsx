@@ -4,14 +4,53 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Colors } from '@/constants/Colors';
 import { useFocusEffect } from 'expo-router';
-// eslint-disable-next-line import/no-unresolved
+ 
 import { FormularioReporte } from '@valle-del-sol/reporte-module';
-import { enviarReporte, fetchFocos, fetchReportes, ReporteDTO, FocoMapaDTO, ReporteListaDTO } from '@/services/apiGateway';
+import { enviarReporte, fetchFocos, fetchReportes, fetchZonasRiesgo, fetchCompanias, ReporteDTO, FocoMapaDTO, ReporteListaDTO, ZonaRiesgoDTO, CompaniaDTO } from '@/services/apiGateway';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { UbicacionContext } from '../../context/UbicacionContext';
 
+const injectFocosIntoWebView = (
+  webViewRef: React.MutableRefObject<WebView | null>,
+  focosData: FocoMapaDTO[]
+) => {
+  if (!webViewRef.current) return;
+  const jsonString = JSON.stringify(focosData);
+  webViewRef.current.injectJavaScript(`
+    if (typeof window.clearSelectedMarker === 'function') window.clearSelectedMarker();
+    if (typeof window.agregarFocos === 'function') window.agregarFocos(${jsonString});
+    true;
+  `);
+};
+
+const injectZonasIntoWebView = (
+  webViewRef: React.MutableRefObject<WebView | null>,
+  zonasData: ZonaRiesgoDTO[]
+) => {
+  if (!webViewRef.current) return;
+  const jsonString = JSON.stringify(zonasData);
+  webViewRef.current.injectJavaScript(`
+    if (typeof window.agregarZonasRiesgo === 'function') window.agregarZonasRiesgo(${jsonString});
+    true;
+  `);
+};
+
+const injectCompaniasIntoWebView = (
+  webViewRef: React.MutableRefObject<WebView | null>,
+  companiasData: CompaniaDTO[]
+) => {
+  if (!webViewRef.current) return;
+  const jsonString = JSON.stringify(companiasData);
+  webViewRef.current.injectJavaScript(`
+    if (typeof window.agregarCompanias === 'function') window.agregarCompanias(${jsonString});
+    true;
+  `);
+};
+
 export default function MapaScreen() {
   const webViewRef = useRef<WebView>(null);
+  const webViewLoaded = useRef(false);
+  const pendingFocosRef = useRef<FocoMapaDTO[] | null>(null);
   const ubicacionContext = useContext(UbicacionContext);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -20,30 +59,10 @@ export default function MapaScreen() {
   const [focos, setFocos] = useState<FocoMapaDTO[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [reportes, setReportes] = useState<ReporteListaDTO[]>([]);
+  const [zonasRiesgo, setZonasRiesgo] = useState<ZonaRiesgoDTO[]>([]);
+  const [companias, setCompanias] = useState<CompaniaDTO[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchCurrentFocos = async () => {
-    try {
-      const [focosData, reportesData] = await Promise.all([
-        fetchFocos(),
-        fetchReportes()
-      ]);
-      setFocos(focosData);
-      setReportes(reportesData);
-      
-      if (webViewRef.current) {
-        // En lugar de llamar a clearSelectedMarker() sin verificar si existe, 
-        // pasamos los focos y actualizamos los puntos del mapa siempre.
-        webViewRef.current.injectJavaScript(`
-          if (typeof window.clearSelectedMarker === 'function') window.clearSelectedMarker(); 
-          if (typeof window.agregarFocos === 'function') window.agregarFocos('${JSON.stringify(focosData)}');
-        `);
-      }
-    } catch (err: any) {
-      console.error('Error actualizando focos:', err);
-    }
-  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -52,11 +71,21 @@ export default function MapaScreen() {
       try {
         const [focosData, reportesData] = await Promise.all([
           fetchFocos(),
-          fetchReportes()
+          fetchReportes(),
         ]);
         setFocos(focosData);
         setReportes(reportesData);
-        // La inyección inicial se hace vía injectedJavaScriptBeforeContentLoaded o el ref una vez cargado
+        pendingFocosRef.current = focosData;
+        if (webViewLoaded.current) {
+          injectFocosIntoWebView(webViewRef, focosData);
+          pendingFocosRef.current = null;
+        }
+        fetchZonasRiesgo().then(setZonasRiesgo).then((data) => {
+          if (webViewLoaded.current && data) injectZonasIntoWebView(webViewRef, data);
+        }).catch(() => {});
+        fetchCompanias().then(setCompanias).then((data) => {
+          if (webViewLoaded.current && data) injectCompaniasIntoWebView(webViewRef, data);
+        }).catch(() => {});
       } catch (err: any) {
         setError(err.message || 'Error al cargar los datos');
       } finally {
@@ -69,11 +98,49 @@ export default function MapaScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!dataLoading) { // Solo refetch si ya cargó inicialmente
-        fetchCurrentFocos();
-      }
+      if (dataLoading) return;
+      const refetch = async () => {
+        try {
+          const [focosData, reportesData] = await Promise.all([
+            fetchFocos(),
+            fetchReportes(),
+          ]);
+          setFocos(focosData);
+          setReportes(reportesData);
+          if (webViewLoaded.current) {
+            injectFocosIntoWebView(webViewRef, focosData);
+          } else {
+            pendingFocosRef.current = focosData;
+          }
+          fetchZonasRiesgo().then(setZonasRiesgo).then((data) => {
+            if (webViewLoaded.current && data) injectZonasIntoWebView(webViewRef, data);
+          }).catch(() => {});
+          fetchCompanias().then(setCompanias).then((data) => {
+            if (webViewLoaded.current && data) injectCompaniasIntoWebView(webViewRef, data);
+          }).catch(() => {});
+        } catch (err: any) {
+          console.error('Error actualizando focos:', err);
+        }
+      };
+      refetch();
     }, [dataLoading])
   );
+
+  const handleWebViewLoadEnd = useCallback(() => {
+    webViewLoaded.current = true;
+    if (pendingFocosRef.current) {
+      injectFocosIntoWebView(webViewRef, pendingFocosRef.current);
+      pendingFocosRef.current = null;
+    } else if (focos.length > 0) {
+      injectFocosIntoWebView(webViewRef, focos);
+    }
+    if (zonasRiesgo.length > 0) {
+      injectZonasIntoWebView(webViewRef, zonasRiesgo);
+    }
+    if (companias.length > 0) {
+      injectCompaniasIntoWebView(webViewRef, companias);
+    }
+  }, [focos, zonasRiesgo, companias]);
 
   const handleReportSubmit = async (data: ReporteDTO) => {
     try {
@@ -82,10 +149,21 @@ export default function MapaScreen() {
       Alert.alert('Éxito', 'Reporte enviado al sistema central.');
       setModalVisible(false);
       
-      // Asegurar que el punto quede fijo refetching los focos (o reportes de este dashboard) 
-      // y pidiendo al webview que actualice y remueva la marca temporal
-      await fetchCurrentFocos();
-      
+      const [focosData, reportesData] = await Promise.all([
+        fetchFocos(),
+        fetchReportes(),
+      ]);
+      setFocos(focosData);
+      setReportes(reportesData);
+      if (webViewLoaded.current) {
+        injectFocosIntoWebView(webViewRef, focosData);
+      }
+      fetchZonasRiesgo().then(setZonasRiesgo).then((data) => {
+        if (webViewLoaded.current && data) injectZonasIntoWebView(webViewRef, data);
+      }).catch(() => {});
+      fetchCompanias().then(setCompanias).then((data) => {
+        if (webViewLoaded.current && data) injectCompaniasIntoWebView(webViewRef, data);
+      }).catch(() => {});
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudo enviar el reporte');
     } finally {
@@ -115,19 +193,52 @@ export default function MapaScreen() {
         ) : error ? (
           <View style={styles.centerContainer}>
             <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                setDataLoading(true);
+                setError(null);
+                const reload = async () => {
+                  try {
+                    const [focosData, reportesData] = await Promise.all([
+                      fetchFocos(),
+                      fetchReportes(),
+                    ]);
+                    setFocos(focosData);
+                    setReportes(reportesData);
+                    if (webViewLoaded.current) {
+                      injectFocosIntoWebView(webViewRef, focosData);
+                    } else {
+                      pendingFocosRef.current = focosData;
+                    }
+                    fetchZonasRiesgo().then(setZonasRiesgo).then((data) => {
+                      if (webViewLoaded.current && data) injectZonasIntoWebView(webViewRef, data);
+                    }).catch(() => {});
+                    fetchCompanias().then(setCompanias).then((data) => {
+                      if (webViewLoaded.current && data) injectCompaniasIntoWebView(webViewRef, data);
+                    }).catch(() => {});
+                  } catch (err: any) {
+                    setError(err.message || 'Error al cargar los datos');
+                  } finally {
+                    setDataLoading(false);
+                  }
+                };
+                reload();
+              }}
+            >
+              <Text style={styles.retryButtonText}>REINTENTAR</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          <>
-            <WebView
-              ref={webViewRef}
-              source={require('../../assets/mapa.html')}
-              style={styles.webview}
-              injectedJavaScriptBeforeContentLoaded={`window.agregarFocos('${JSON.stringify(focos)}')`}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-              onMessage={onMessage}
-            />
-          </>
+          <WebView
+            ref={webViewRef}
+            source={require('../../assets/mapa.html')}
+            style={styles.webview}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            onMessage={onMessage}
+            onLoadEnd={handleWebViewLoadEnd}
+          />
         )}
       </View>
 
@@ -191,6 +302,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: Colors.onPrimary,
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   emptyText: {
     color: Colors.onSurfaceVariant,
